@@ -14,6 +14,8 @@
 2、link：建立指令与对应数据的绑定关系，并以数据的初始值进行渲染
 
 
+![原理图](../image/reactive.png);
+
 ### 初始化源码
 ```js
 function Vue(options) {

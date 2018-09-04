@@ -1,5 +1,5 @@
 ### 前言
-在Vue中，计算属性并不是简单的getter，它会持续追踪它的响应依赖。在计算一个计算属性时，Vue更新它的依赖并缓存结果，只有当其中一个依赖发生变化时，缓存的记过才无效。因此，只要依赖不发生变化，访问计算属性就会返回缓存结果，而不是调用getter。
+在Vue中，计算属性并不是简单的getter，它会持续追踪它的响应依赖。在计算一个计算属性时，Vue更新它的依赖并缓存结果，只有当其中一个依赖发生变化时，缓存的记过才无效。因此，只要依赖不发生变化，访问计算属性就会返回缓存结果，而不是调用getter。**计算器本质上是一个computed watcher**。
 
 ### 源码实现
 那么Vue中是如何实现这种计算属性的呢？请看源码
@@ -22,6 +22,7 @@ function initComputed(vm, computed) {
             console.warn('missing computed property');
         }
         if (!isSSR) {
+            // 为每个计算属性创建监听器
             watchers[key] = new Watcher(
                 vm,
                 getter || noop,

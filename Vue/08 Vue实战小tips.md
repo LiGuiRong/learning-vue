@@ -7,3 +7,24 @@
 > - 当你修改数组长度时，如vm.items.length = newLength;
 > 为了解决这个问题，官方也给出了终极解决方案：
 > vm.set(items, index, newVal) 
+
+3、v-if和v-show的区别
+- v-if：当值为false时，不会渲染该DOM节点
+- v-show：为false时，会渲染该DOM节点，但是该节点display：none
+- v-if有更高的切换开销，v-show有更高的初始渲染开销，因此，如果需要频繁的切换，使用v-show较好，如果在运行时条件很少改变，则使用v-if较好
+
+4、对象和数组添加新属性的时候是不会触发setter的，即新增的属性不是响应式属性，需要使用Vue.set来设置
+```js
+let vm = new Vue({
+    data() {
+        return {
+            a: 1,
+            arr: []
+        }
+    }
+})
+
+vm.b = 2; // vm.b不是响应式属性
+vm.arr[0] = 1; // arr[0] 不是响应式属性
+```
+

@@ -6,7 +6,7 @@
 为了解决这个问题，官方也给出了解决方案：
 > vm.set(items, index, newVal) 或 vm.items.splice(index, 1, newVal);
 > vm.items.splice(newLength);
-那么，Vue源码是如何实现的呢？其实就是重写了Array的方法
+那么，Vue源码是如何实现的呢？其实就是重写了Array中能改变自身的方法
 ```js
 const arrayProto = Array.prototype;
 const arrayMethods = Object.create(arrayProto);
@@ -20,12 +20,15 @@ const methodsToPatch = [
     'reverse'
 ]
 
+// 先执行原生方法，然后对能增加数组长度的三个方法push，unshift，splice做额外处理
+// 获取插入值，然后把新添加的值变成一个响应式对象，再调用ob.dep.notify()触发更新
 methodsTopatch.forEach(function(method) {
     const original = arrayProto[method]; // 原生方法
     def(arrayMethods, method, function mutator(...args) {
         const result = original.apply(this, args);
         const ob = this.__ob__;
         let inserted;
+        // 对能增加数组长度的三个方法push，unshift，splice做额外处理
         switch(method){
             case 'push':
             case 'unshift':
@@ -35,9 +38,11 @@ methodsTopatch.forEach(function(method) {
                 inserted = args.slice(2);
                 break;
         }
+        // 获取插入值，然后把新添加的值变成一个响应式对象
         if (inserted) {
             ob.observerArray(inserted);
         }
+        // 调用ob.dep.notify()触发更新
         ob.dep.notify();
         return result;
     })
@@ -74,22 +79,28 @@ function observer(value: any, asRootData: ?boolean): Observer | void {
     return ob;
 }
 ```
+
 通过阅读上面的源码，我们知道了Vue是通过将重写源码来实现数组的响应式绑定的，那么，它的另外几个API：Vue.set，Vue.del是如何实现的呢？
 ```js
 function set(target: Array<any> | Object, key: any, val: any): any{
+    // 数组使用重写的方法实现响应式
     if (Array.isArray(target) && isValidArrayIndex(key)) {
         target.length = Math.max(target.length, key);
         targrt.splice(key, 1, val);
         return val;
     }
+    // 如果是属性在对象上且不再其原型上，则重新设置该值
     if (key in target && !(key in Object.prototype)) {
         target[key] = val;
         return val;
     }
+    // observer实例，不存在则说明不是一个响应式对象
     const ob = target.__ob__;
+    // 不能在一个Vue实例上添加响应式属性
     if (target._isVue || (ob && ob.vmCount)) {
         return val;
     }
+    // 非响应式对象直接设置属性并返回
     if (!ob) {
         target[key] = val;
         return val;
@@ -100,18 +111,23 @@ function set(target: Array<any> | Object, key: any, val: any): any{
 }
 
 function del(target: Array<any> | Object, key: any) {
+    // 数组使用重写的方法实现响应式
     if (Array.isArray(target) && isValidArrayIndex(key)) {
         targrt.splice(key, 1);
         return;
     }
+    // observer实例，不存在则说明不是一个响应式对象
     const ob = target.__ob__;
+    // Vue实例的属性不能删除
     if (target._isVue || (ob && ob.vmCount)) {
         return;
     }
+    // 非本身属性不能删除
     if (!hasOwn(target, key)) {
         return;
     }
     delete target[key];
+    // 非响应式对象不需要执行ob.dep.notify();
     if (!ob) {
         return;
     }
